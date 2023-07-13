@@ -1,5 +1,40 @@
 ---
 import Login from "../components/Login.svelte";
+import pkceChallenge from "pkce-challenge";
+const pkce_pair = await pkceChallenge();
+
+// This should be passed back from 302 in oauth-redirect
+const sessionCookie = Astro.cookies.get("session");
+let session;
+if (sessionCookie.value) {
+	session = sessionCookie.json();
+	Astro.cookies.set("session", sessionCookie.value, { httpOnly: true });
+} else {
+	const stateValue =
+		Math.random().toString(36).substring(2, 15) +
+		Math.random().toString(36).substring(2, 15) +
+		Math.random().toString(36).substring(2, 15) +
+		Math.random().toString(36).substring(2, 15) +
+		Math.random().toString(36).substring(2, 15) +
+		Math.random().toString(36).substring(2, 15);
+
+	const verifier = pkce_pair["code_verifier"];
+	const challenge = pkce_pair["code_challenge"];
+	Astro.cookies.set(
+		"session",
+		JSON.stringify({
+			stateValue,
+			verifier,
+			challenge,
+		}),
+		{ httpOnly: true }
+	);
+	session = {
+		stateValue,
+		verifier,
+		challenge,
+	};
+}
 ---
 
 <html lang="en">
@@ -11,8 +46,11 @@ import Login from "../components/Login.svelte";
 		<title>Home</title>
 	</head>
 	<body>
-		<h1>Home</h1>
-
-		<Login />
+		<section class="flex w-full h-screen p-8 gap-8">
+			<div class="flex flex-col gap-8">
+				<h1 class="text-6xl">Welcome</h1>
+				<Login client:load {session} />
+			</div>
+		</section>
 	</body>
 </html>
